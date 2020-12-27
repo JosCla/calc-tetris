@@ -1,0 +1,562 @@
+.TETRIS
+
+.PREREQUISITES
+.A: Horizontal movement tracker
+.B: Vertical movement tracker
+.T: Lines Cleared
+.S: Score
+.D: Countdown until movement autorepeats
+.F: Countdown until rotation autorepeats
+.G: Tracks whether a block has been placed before
+.H: Tracks current held piece
+.L1: Tracks total blocks per line (10 makes a full line)
+.L2: Tracks positions of blocks in current piece relative to its center
+.L: Level
+.W: Maximum time until piece automatically drops
+.V: Remaining time until piece automatically drops
+
+.Clearing the screen
+Lbl AA
+ClrHome
+ClrDraw
+
+.Initializing variables
+0->A->B->T->S->D->F->G->H->{L1}->{L2}+1->L
+50->W->V
+
+.Zeroing buffers, generating new piece bags
+Fill(L1,25)
+Fill(L2,30)
+sub(GEN,7)
+sub(GEN,14)
+sub(NEW)
+
+.Drawing the playing field
+For(theta,0,19)
+	sub(BLOC,0,theta)
+	sub(BLOC,11,theta)
+End
+For(theta,0,11)
+	sub(BLOC,theta,20)
+	sub(BLOC,theta,21)
+End
+DispGraph
+
+.Drawing the UI text
+Text(37,1,"NEXT:")
+Text(60,1,"HOLD:")
+Text(60,24,"LEVEL:")
+Text(83,24,L>Dec)
+Text(60,34,"LINES:")
+Text(83,34,T>Dec)
+Text(60,44,"SCORE:")
+Text(60,54,S>Dec)
+StoreGDB 
+
+.MAIN REPEAT LOOP
+.W: Maximum time until piece automatically drops
+.V: Remaining time until piece automatically drops
+.A: Horizontal movement tracker
+.B: Vertical movement tracker
+Repeat getKey(15) or ({L1}>0)
+	.Decrementing time until automatic piece drop
+	V--
+	
+	.Displaying the current piece (and hiding it for further calculations)
+	sub(DISP)
+	DispGraph
+	sub(DISP)
+	
+	.Getting user inputs
+	sub(KEY)
+	
+	.Doing piece movement
+	V??B++
+	V??W->V
+	If A!=0 or (B!=0)
+		sub(MOVE)
+	End
+	
+	.Checking for line clears
+	sub(LINE)
+End
+
+.SCOREBOARD
+.L1: Tracks the initials the user enters
+.A: Current position in initials selection
+.B: Change in letter code at current position
+
+.Setting up UI
+ClrHome
+Text(0,0,"ENTER INITIALS")
+65->{L1}->{L1+1}->{L1+2}
+0->A
+Text(0,8,"A")
+Text(6,8,"A")
+Text(12,8,"A")
+Text(0,16,"^")
+
+.Getting three characters for initials
+Repeat A=3
+	.Getting up/down presses
+	getKey(1)?B++
+	getKey(4)?B--
+	
+	.Advancing character when the user hits enter
+	If getKey(9)
+		Text(6*A,16,"   ")
+		Pxl-Off(6*A,17)
+		A++
+		Text(6*A,16,"^")
+		Pause 400
+	End
+	
+	.Changing the current character
+	If B
+		{L1+A}+B->{L1+A}
+		{L1+A}=91?65->{L1+A}
+		{L1+A}=64?90->{L1+A}
+		Text(6*A,8,{L1+A}>Char)
+		Pause 300
+		0->B
+	End
+End
+
+.Putting the current game's score on the leaderboard
+.P: The player's placement on the scoreboard
+.S: Score
+.T: Total lines cleared
+.L: Level
+ClrHome
+6->P
+
+.Unarchiving and getting pointer to the scoreboard
+UnArchive "appvTETSB"
+!If GetCalc("appvTETSB")->theta
+	Return!If GetCalc("appvTETSB",48)->theta
+
+	.(generating a new scoreboard if needed)
+	For(M,0,47)
+		0->{theta+M}
+	End
+	For(M,0,5)
+		For(N,0,2)
+			65->{M*8+5+N+theta}
+		End
+	End
+End
+
+.Storing current stats in the last place position
+S->{theta+40}^^r^^r
+T->{theta+42}^^r^^r
+L->{theta+44}
+{L1}->{theta+45}
+{L1+1}->{theta+46}
+{L1+2}->{theta+47}
+
+.Moving the player up the leaderboard as needed
+For(M,1,5)
+	40-(M*8)->N
+	{theta+N}^^r^^r->A
+	{theta+N+8}^^r^^r->B
+	If B>A
+		Exch(theta+N,theta+N+8,8)
+		P--
+	End
+End
+
+.Displaying the final scoreboard
+Text(0,0,"GAME OVER")
+Text(15,10,"SCORE")
+Text(40,10,"LINES")
+Text(65,10,"LEVEL")
+Text(90,8*P+9,"<")
+For(M,0,5)
+	.In order: Initials | Score | Lines | Level
+	For(N,0,2)
+		Text(N*4,8*M+17,{8*M+5+N+theta}>Char)
+	End
+	Text(15,8*M+17,{8*M+theta}^^r^^r>Dec)
+	Text(40,8*M+17,{8*M+2+theta}^^r^^r>Dec)
+	Text(65,8*M+17,{8*M+4+theta}>Dec)
+End
+Archive "appvTETSB"
+
+.Exiting scoreboard when the user presses enter
+Repeat getKey(9)
+End
+
+.Asking the user if they would like to play again
+ClrHome
+Text(0,0,"TRY AGAIN?")
+Text(0,8,"[2ND] - YES")
+Text(0,16,"[ALPHA] - NO")
+0->theta
+Repeat theta
+	getKey(54)?1->theta
+	getKey(48)?2->theta
+End
+ReturnIf (theta-1)
+Goto AA
+
+.PIECE BAG GENERATION
+.r1: Pointer relative to L2 to put pieces in
+.r2: Pieces left to put in
+.r3: Next piece to be put in piece bag
+Lbl GEN
+7->[r2]
+For(theta,1,7)
+	theta->{L2+21+theta}
+End
+For(theta,0,6)
+	rand^[r2]+22->[r3]
+	{L2+[r3]}->{L2+[r1]+theta}
+	If ([r3]-22)!=([r2]-1)
+		For([r4],[r3],27)
+			{L2+[r4]+1}->{L2+[r4]}
+		End
+	End
+	[r2]--
+End
+Return
+
+.LINE CLEAR CHECKING
+.K: Lines cleared in this check
+.theta: Current line being checked
+.L1: Denotes how many blocks are in each line
+.T: Total lines cleared
+.L: Level
+.S: Score
+.W: Maximum time until piece automatically drops
+.V: Remaining time until piece automatically drops
+Lbl LINE
+0->K
+For(theta,1,19)
+	If {theta+L1}=10
+		.Current line is full. Updating lines and zeroing said line
+		0->{theta+L1}
+		K++
+		T++
+		
+		.Moving line counts of higher lines
+		For(P,19-theta,18)
+			{19-P-1+L1}->{19-P+L1}
+		End
+		0->{L1}
+		
+		.Moving blocks of higher lines
+		For(P,1,10)
+			sub(BLOC,P,theta)
+		End
+		For(P,19-theta,18)
+			For(Q,1,10)
+				If sub(PXL,Q*3,18-P*3)
+					sub(BLOC,Q,18-P)
+					sub(BLOC,Q,19-P)
+				End
+			End
+		End
+		
+		.Increasing level as needed
+		!If T^20
+			L++
+			If W>2
+				W-2->W
+			End
+			W->V
+		End
+		DispGraph
+		Pause 50
+	End
+End
+
+.Incrementing score if needed
+If K
+	DispGraph
+	K=1?S++
+	K=2?S+3->S
+	K=3?S+7->S
+	K=4?S+15->S
+	Text(83,24,L>Dec)
+	Text(83,34,T>Dec)
+	Text(60,54,S>Dec)
+	StoreGDB 
+End
+Return
+
+.NEW PIECE ROUTINE
+.E: Prevents repetitive use of the hold function
+.G: Indicates whether the old piece must be placed down
+.(X, Y): Current piece's center's position
+.L1: Number of blocks on each row
+.L2 0-6: Positions of blocks relative to the main block in a piece
+.L2 7-21: Next pieces
+.Z: Current piece
+Lbl NEW
+0->E
+If G
+	.Setting down the old piece if there is one
+	{Y+L1}++
+	For(theta,0,2)
+		{theta*2+1+L2}-2->I
+		I+Y->J
+		J+1?{J+L1}++
+	End
+	sub(DISP)
+	
+	.Inverting old next pieces
+	13->X
+	For(N,7,11)
+		sub(INI,{L2+N})
+		(N-7*3+4)->Y
+		sub(DISP)
+	End
+Else
+	.Setting G to 1 for next pieces
+	1->G
+End
+
+.Making the next piece into the current piece
+{L2+7}->Z
+For(N,8,21)
+	{L2+N}->{L2+N-1}
+End
+
+.Putting more pieces into the piece bag if needed
+If {L2+14}=0
+	sub(GEN,14)
+End
+
+.Redisplaying the next pieces
+13->X
+For(N,7,11)
+	sub(INI,{L2+N})
+	(N-7*3+4)->Y
+	sub(DISP)
+End
+
+.Reinitializing the current piece and resetting the piece coordinates
+sub(INI,Z)
+4->X
+0->Y
+Return
+
+.KEYPRESS HANDLING
+.D: Countdown until movement autorepeats
+.F: Countdown until rotation autorepeats
+.A: Horizontal movement tracker
+.B: Vertical movement tracker
+.E: Prevents repetitive use of the hold function
+.Z: Current piece
+.H: Held piece
+Lbl KEY
+
+.Pause game
+If getKey(47)
+	.Storing the current screen, and putting up a new pause screen
+	StorePic
+	ClrDraw
+	For([r6],0,95)
+		Pxl-On([r6],20)
+		Pxl-On([r6],30)
+	End
+	DispGraph
+	Text(36,22,"PAUSED")
+	
+	.Waiting until the user presses enter
+	Repeat getKey(9)
+	End
+	
+	.Counting down from 3, and resuming gameplay
+	ClrHome
+	Text(46,22,"3")
+	Pause 1200
+	ClrHome
+	Text(46,22,"2")
+	Pause 1200
+	ClrHome
+	Text(46,22,"1")
+	Pause 1200
+	ClrHome
+	RecallPic
+End
+
+.Performing other actions only if the current piece is not automatically dropped
+If V
+	.Resetting autorepeat timers if no key is being pressed, otherwise decrementing them
+	(getKey(1) or (getKey(2)) or (getKey(3)) or (getKey(54)) or (getKey(55)) or (getKey(48)) or (getKey(4))??0->D->F
+	D?D--
+	F?F--
+	
+	.Down (soft drop)
+	If getKey(1) and (D=0)
+		3->D
+		B++
+	End
+	
+	.Left
+	If getKey(2) and (D=0)
+		6->D
+		A--
+	End
+	
+	.Right
+	If getKey(3) and (D=0)
+		6->D
+		A++
+	End
+	
+	.Up (Hard drop)
+	If getKey(4) and (D=0)
+		1->E
+		Repeat E=0
+			1->B
+			sub(MOVE)
+		End
+		Pause 200
+	End
+	
+	.Clockwise rotation
+	If getKey(55) and (F=0) and (Z!=6)
+		sub(RRGT)
+	End
+	
+	.Counterclockwise rotation
+	If getKey(54) and (F=0) and (Z!=6)
+		sub(RLFT)
+	End
+	
+	.Hold piece
+	If getKey(48) and (E=0)
+		!If H
+			.(if this is the first time using the hold function)
+			
+			.Putting current piece into held piece
+			Z->H
+			
+			.Drawing held piece in proper spot
+			sub(INI,H)
+			21->X
+			4->Y
+			sub(DISP)
+			
+			.Inverting next pieces to make sub(NEW) work properly
+			13->X
+			For(N,7,11)
+				sub(INI,{L2+N})
+				(N-7*3+4)->Y
+				sub(DISP)
+			End
+			
+			.Moving up next pieces
+			0->G
+			sub(NEW)
+		Else
+			.(if the hold function has been used before)
+			
+			.Swapping current and held pieces
+			H->[r6]
+			Z->H
+			[r6]->Z
+			
+			.Redrawing held piece, resetting piece position
+			sub(INI,H)
+			21->X
+			4->Y
+			sub(DISP)
+			sub(INI,Z)
+			sub(DISP)
+			0->Y
+			4->X
+		End
+		
+		.Incrementing E to prevent repetitive use of the hold function
+		E++
+	End
+End
+Return
+
+.CLOCKWISE ROTATION
+.(X, Y): Current piece's center's position
+.L2 0-6: Positions of blocks relative to the main block in a piece
+Lbl RRGT
+!If (sub(PXL,X-{L2+1}+3*3,Y+{L2}-2*3) or (sub(PXL,X-{L2+3}+3*3,Y+{L2+2}-2*3)) or (sub(PXL,X-{L2+5}+3*3,Y+{L2+4}-2*3)))
+	.If each piece can fit into its new rotated location, perform the rotation
+	18->F
+	For(theta,0,2)
+		{theta*2+L2->[r3]}->{L2+6}
+		~{theta*2+1+L2->[r4]}+4->{[r3]}
+		{L2+6}->{[r4]}
+	End
+End
+Return
+
+.COUNTERCLOCKWISE ROTATION
+.(X, Y): Current piece's center's position
+.L2 0-6: Positions of blocks relative to the main block in a piece
+Lbl RLFT
+!If (sub(PXL,X+{L2+1}-1*3,Y-{L2}+2*3) or (sub(PXL,X+{L2+3}-1*3,Y-{L2+2}+2*3)) or (sub(PXL,X+{L2+5}-1*3,Y-{L2+4}+2*3)))
+	.If each piece can fit into its new rotated location, perform the rotation
+	18->F
+	For(theta,0,2)
+		{theta*2+1+L2->[r3]}->{L2+6}
+		~{theta*2+L2->[r4]}+4->{[r3]}
+		{L2+6}->{[r4]}
+	End
+End
+Return
+
+.PIECE INITIALIZATION
+.L2 0-6: Positions of blocks relative to the main block in a piece
+Lbl INI
+.Changes the offsets of blocks from the center of the piece according to argument r1
+.Offsets in both X and Y have 2 added to them to make them unsigned (I didn't know how to treat values as unsigned at this point)
+.In order, the initializations are:
+.T, S, J, L, Z, O, I
+[r1]=1?1->{L2}+1->{L2+1}->{L2+3}->{L2+4}+1->{L2+2}->{L2+5}
+[r1]=2?1->{L2+2}+1->{L2+1}->{L2+4}+1->{L2}->{L2+3}->{L2+5}
+[r1]=3?1->{L2}+1->{L2+1}->{L2+3}+1->{L2+2}->{L2+4}->{L2+5}
+[r1]=4?1->{L2}->{L2+4}+1->{L2+1}->{L2+3}+1->{L2+2}->{L2+5}
+[r1]=5?1->{L2}+1->{L2+1}->{L2+2}+1->{L2+3}->{L2+4}->{L2+5}
+[r1]=6?2->{L2+1}->{L2+2}+1->{L2}->{L2+3}->{L2+4}->{L2+5}
+[r1]=7?1->{L2}+1->{L2+1}->{L2+3}->{L2+5}+1->{L2+2}+1->{L2+4}
+Return
+
+.OTHER SUBROUTINES
+
+.Draws a 3x3 block at given coordinates (coordinates will be multiplied by 3)
+Lbl BLOC
+For(I,0,2)
+	For(J,0,2)
+		Pxl-Change([r1]*3+I,[r2]*3+J)
+	End
+End
+Return
+
+.Returns whether the pixel at a given coordinate is on
+Lbl PXL
+pxl-Test([r1],[r2])
+Return
+
+.Displays the current piece
+Lbl DISP
+sub(BLOC,X+1,Y)
+For(theta,0,2)
+	sub(BLOC,X+{theta*2+L2}-1,Y+{theta*2+1+L2}-2)
+End
+Return
+
+.Moves the current piece if all squares in the new position are open (I don't know why I decided to put this all the way down here)
+.(X, Y): Current piece's center's position
+.L2 0-6: Positions of blocks relative to the main block in a piece
+.A: Horizontal movement tracker
+.B: Vertical movement tracker
+Lbl MOVE
+!If (sub(PXL,X+A+1*3,Y+B*3) or (sub(PXL,X+A+{L2}-1*3,Y+B+{L2+1}-2*3)) or (sub(PXL,X+A+{L2+2}-1*3,Y+B+{L2+3}-2*3)) or (sub(PXL,X+A+{L2+4}-1*3,Y+B+{L2+5}-2*3)))
+	X+A->X
+	Y+B->Y
+	ElseIf B and (A=0)
+	sub(NEW)
+End
+0->A->B
+Return
