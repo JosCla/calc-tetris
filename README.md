@@ -29,7 +29,7 @@ After transferring the binary to your device:
 ### From Source
 After transferring the source to your device:
 1. Use [Apps] to access your applications.
-2. Start the Axe Parser compiler, labeled "Axe". If you don't have Axe, you can find the latest release at https://www.omnimaga.org/the-axe-parser-project/latest-updates-(***do-not-post-here!***)/45/ . After decompressing the file, you can just send the enclosed Axe.8xk to your device, and it will be recognized as a runnable application.
+2. Start the Axe Parser compiler, labeled "Axe". If you don't have Axe Parser, you can find the latest release at https://www.omnimaga.org/the-axe-parser-project/latest-updates-(***do-not-post-here!***)/45/ .
 3. Select the Compile option.
 4. Use the Ion compile mode (it should be Ion by default).
 5. Select the AXETETRI program, and wait for it to compile.
