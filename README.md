@@ -4,6 +4,7 @@ Calculator Tetris made with Axe Parser.
 ## Compatibility
 This program is definitely compatible with the following calculators, and will almost definitely not corrupt/damage them:
 - TI-84 Plus
+
 This program is likely compatible with other similar TI calculators, particularly those in the TI-83 and TI-84 series, though I have not had the chance to test this. Please notify me if you find that this works on a different calculator that is not listed here!
 
 Additionally, although I have tried my best to ensure that this program will not corrupt/damage your device, there is always the chance, especially if you use this program on a device that isn't listed above, that the program may damage your device.
