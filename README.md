@@ -1,5 +1,5 @@
 # calc-tetris
-Calculator Tetris made with Axe Parser.
+Calculator Tetris made with Axe Parser. Made c. April 2017.
 
 ## Compatibility
 This program is definitely compatible with the following calculators, and will almost definitely not corrupt/damage them:
@@ -42,3 +42,6 @@ After transferring the source to your device:
 - [2nd/Mode]: Rotates the piece clockwise/counterclockwise
 - [Alpha]: Hold piece
 - [Math]: Pause game ([Enter] to unpause)
+
+## Documentation
+Included in doc.txt is a rough documentation of the function of the program. This was one of my earlier programming endeavors, and some of the design decisions that I made were somewhat strange, and difficult to correct. I nevertheless tried to give some sense of what the program is doing at each step using numerous comments along with more appropriate spacing and indentation.
